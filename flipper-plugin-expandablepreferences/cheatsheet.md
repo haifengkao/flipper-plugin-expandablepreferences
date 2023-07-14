@@ -1,7 +1,7 @@
 
 1. clone https://github.com/facebook/flipper
 2. start the dev mode of flipper
-    1. cd flipper
+    1. cd flipper/desktop
     2. yarn start
 3. clone FlipperExpandablePreferencesiOS
     1. cd FlipperExpandablePreferencesiOS
