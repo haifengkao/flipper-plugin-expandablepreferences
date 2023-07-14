@@ -246,6 +246,9 @@ const themeOptions: ThemeKeys[] = [
     'twilight',
 ];
 
+// get the value in the specified path of a json object
+// e.g. path: ['a', 'b', 'c'] will return jsonObj['a']['b']['c']
+// e.g. path: ['a', 0, 'c'] will return jsonObj['a'][0]['c']
 function extractValue(jsonObj, path: Array<string>) {
     let value = jsonObj;
     for (let key of path) {
@@ -296,9 +299,11 @@ export function Component() {
                     onChange={instance.setSelectedPreferences}
                 />
                 <span style={{ marginLeft: '16px', marginRight: '16px' }}>Options</span>
-                {selectedTheme}
                 <Select
-                    options={themeOptions}
+                    options={themeOptions.reduce((obj, item) => {
+                        obj[item] = item;
+                        return obj;
+                    }, {} as Record<string, string>)}
                     selected={selectedTheme}
                     onChange={updateSelectedTheme}
                 />
