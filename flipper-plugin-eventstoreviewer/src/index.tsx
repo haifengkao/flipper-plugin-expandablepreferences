@@ -23,8 +23,10 @@ import {
     createState,
     usePlugin,
     useValue,
+    Layout,
     getFlipperLib,
 } from 'flipper-plugin';
+import { CoffeeOutlined } from '@ant-design/icons';
 import ReactJson, { ThemeKeys } from 'react-json-view';
 import { clone } from 'lodash';
 
@@ -58,12 +60,6 @@ type Methods = {
     getAllSharedPreferences: (params: {}) => Promise<
         Record<string, SharedPreferences>
     >;
-    setSharedPreference: (
-        params: SetSharedPreferenceParams,
-    ) => Promise<SharedPreferences>;
-    deleteSharedPreference: (
-        params: DeleteSharedPreferenceParams,
-    ) => Promise<SharedPreferences>;
 };
 
 export function plugin(client: PluginClient<Events, Methods>) {
@@ -77,29 +73,21 @@ export function plugin(client: PluginClient<Events, Methods>) {
         { persist: 'sharedPreferences' },
     );
 
+    function makeEmptyEntry() {
+        return {
+            preferences: {},
+            changesList: [],
+        };
+    }
+
     function updateSharedPreferences(update: { name: string; preferences: any }) {
         if (selectedPreferences.get() == null) {
             selectedPreferences.set(update.name);
         }
         sharedPreferences.update((draft) => {
-            const entry = draft[update.name] || { changesList: [] };
+            const entry = draft[update.name] || makeEmptyEntry();
             entry.preferences = update.preferences;
             draft[update.name] = entry;
-        });
-    }
-
-    async function setSharedPreference(params: SetSharedPreferenceParams) {
-        const results = await client.send('setSharedPreference', params);
-        updateSharedPreferences({
-            name: params.sharedPreferencesName,
-            preferences: results,
-        });
-    }
-    async function deleteSharedPreference(params: DeleteSharedPreferenceParams) {
-        const results = await client.send('deleteSharedPreference', params);
-        updateSharedPreferences({
-            name: params.sharedPreferencesName,
-            preferences: results,
         });
     }
 
@@ -136,28 +124,22 @@ export function plugin(client: PluginClient<Events, Methods>) {
                     name: name,
                     preferences: preferences.preferences,
                 });
-
-                for (const key in preferences.preferences) {
-                    await client.send('setSharedPreference', {
-                        sharedPreferencesName: name,
-                        preferenceName: key,
-                        preferenceValue: preferences.preferences[key],
-                    });
-                }
             }
         }
     }
 
     client.onMessage('sharedPreferencesChange', (change) =>
         sharedPreferences.update((draft) => {
-            const entry = draft[change.preferences];
-            if (entry == null) {
-                return;
-            }
+            const entry = draft[change.preferences] || makeEmptyEntry();
             if (change.deleted) {
                 delete entry.preferences[change.name];
             } else {
-                entry.preferences[change.name] = change.value;
+                // event store is append-only
+                if (entry.preferences[change.name] == undefined) {
+                    entry.preferences[change.name] = [];
+
+                }
+                (entry.preferences[change.name] as any[]).push(change.value);
             }
             entry.changesList.unshift(change);
             draft[change.preferences] = entry;
@@ -174,8 +156,6 @@ export function plugin(client: PluginClient<Events, Methods>) {
         selectedPreferences,
         sharedPreferences,
         setSelectedPreferences,
-        setSharedPreference,
-        deleteSharedPreference,
         saveToFile,
         loadFromFile,
     };
@@ -277,7 +257,16 @@ export function Component() {
     };
 
     if (selectedPreferences == null) {
-        return null;
+        return (
+            <Layout.Horizontal center grow>
+                <Layout.Container center grow gap>
+                    <CoffeeOutlined />
+                    <Text type="secondary">
+                        Waiting for data
+                    </Text>
+                </Layout.Container>
+            </Layout.Horizontal>
+        );
     }
     const entry = sharedPreferences[selectedPreferences];
     if (entry == null) {
@@ -324,39 +313,6 @@ export function Component() {
                     <ReactJson src={entry.preferences}
                         theme={selectedTheme}
                         collapseStringsAfterLength={120}
-                        onEdit={async (edit) => {
-                            const { name, namespace, updated_src } = edit;
-                            const updatedNamespace: Array<string> = namespace.concat(name).filter((value) => value !== null);
-                            if (updatedNamespace.length >= 1) {
-                                const prefs = await instance.setSharedPreference({
-                                    sharedPreferencesName: selectedPreferences,
-                                    preferenceName: updatedNamespace[0],
-                                    preferenceValue: extractValue(updated_src, updatedNamespace.slice(0, 1)),
-                                });
-                                updateSharedPreferences({ name: selectedPreferences, preferences: prefs });
-                            }
-                        }}
-                        onDelete={async (edit) => {
-                            const { name, namespace, updated_src } = edit;
-                            const updatedNamespace: Array<string> = namespace.concat(name).filter((value) => value !== null);
-
-                            if (updatedNamespace.length == 1) {
-                                // delete the whole key
-                                const prefs = await instance.deleteSharedPreference({
-                                    sharedPreferencesName: selectedPreferences,
-                                    preferenceName: updatedNamespace[0],
-                                });
-                                updateSharedPreferences({ name: selectedPreferences, preferences: prefs });
-                            } else if (updatedNamespace.length > 1) {
-                                // replace the select key value
-                                const prefs = await instance.setSharedPreference({
-                                    sharedPreferencesName: selectedPreferences,
-                                    preferenceName: updatedNamespace[0],
-                                    preferenceValue: extractValue(updated_src, updatedNamespace.slice(0, 1))
-                                });
-                                updateSharedPreferences({ name: selectedPreferences, preferences: prefs });
-                            }
-                        }}
                     />
 
                 </InspectorColumn>
