@@ -21,12 +21,21 @@
     },
     "peerDependencies": {
         "@emotion/styled": "latest",
-        "flipper-plugin": "^0.203.0",
-        "antd": "latest",
+        "antd": "^4.8.0",
+        "flipper-plugin": "latest",
         "react": "latest",
         "react-dom": "latest"
     },
+    "aboutOverrides": "workaround http://github.com/mac-s-g/react-json-view/issues/441",
+    "overrides": {
+        "react-json-view": {
+            "react": "$react",
+            "react-dom": "$react-dom"
+        }
+    },
     "devDependencies": {
+        "@babel/core": "^7.22.8",
+        "@babel/preset-env": "^7.22.7",
         "@babel/preset-react": "latest",
         "@babel/preset-typescript": "latest",
         "@emotion/styled": "latest",
@@ -34,10 +43,12 @@
         "@types/jest": "latest",
         "@types/react": "latest",
         "@types/react-dom": "latest",
-        "antd": "latest",
-        "flipper-plugin": "latest",
+        "antd": "^4.8.0",
+        "babel-jest": "^29.6.1",
         "flipper-pkg": "latest",
-        "jest": "latest",
+        "flipper-plugin": "latest",
+        "jest": "^29.6.1",
+        "jest-environment-jsdom": "^29.6.1",
         "jest-mock-console": "latest",
         "react": "latest",
         "react-dom": "latest",
@@ -45,8 +56,15 @@
     },
     "jest": {
         "testEnvironment": "jsdom",
+        "aboutTransformIgnorePatterns": "// workaround: https: //stackoverflow.com/questions/49263429/jest-gives-an-error-syntaxerror-unexpected-token-export",
+        "transformIgnorePatterns": [
+            "node_modules/(?!@ngrx|(?!deck.gl)|ng-dynamic)"
+        ],
         "setupFiles": [
             "<rootDir>/jest-setup.ts"
         ]
+    },
+    "dependencies": {
+        "react-json-view": "^1.21.3"
     }
 }
