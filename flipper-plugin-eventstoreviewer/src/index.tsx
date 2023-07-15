@@ -139,7 +139,7 @@ export function plugin(client: PluginClient<Events, Methods>) {
                     entry.preferences[change.name] = [];
 
                 }
-                (entry.preferences[change.name] as any[]).push(change.value);
+                entry.preferences[change.name] = (entry.preferences[change.name] as any[]).concat(change.value);
             }
             entry.changesList.unshift(change);
             draft[change.preferences] = entry;
